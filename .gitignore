@@ -1,0 +1,4 @@
+node_modules/
+dist/
+.env
+swagger-v2.3.json

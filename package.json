@@ -1,0 +1,25 @@
+{
+  "name": "glpi-mcp-v2",
+  "version": "1.0.0",
+  "description": "MCP server para API GLPI v2.3 (OAuth2)",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "glpi-mcp-v2": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.1",
+    "dotenv": "^16.4.7"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.10",
+    "typescript": "^5.7.3",
+    "tsx": "^4.19.2",
+    "vitest": "^3.0.4"
+  }
+}
