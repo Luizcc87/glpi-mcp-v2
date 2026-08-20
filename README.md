@@ -88,5 +88,21 @@ GLPI rodando:
 curl -s "http://SEU_GLPI/api.php/doc.json" -o swagger-v2.3.json
 ```
 
+## 🌐 Modo HTTP (Express)
+
+O servidor suporta opcionalmente comunicação via HTTP, usando o endpoint stateless recomendado (`POST /mcp`).
+Para ativar este modo, defina as variáveis de ambiente:
+
+- `MCP_TRANSPORT=http` (O padrão é `stdio`)
+- `MCP_HTTP_PORT=3000` (Opcional, define a porta do servidor Express)
+
+Exemplo de requisição para listar as ferramentas usando curl:
+
+```bash
+curl -X POST http://localhost:3000/mcp \
+  -H "Content-Type: application/json" \
+  -d '{"jsonrpc": "2.0", "id": 1, "method": "tools/list"}'
+```
+
 ## Licença
 MIT
