@@ -54,9 +54,11 @@ GLPI_PASSWORD=senha_glpi
 
 ## 🔌 Registro em Cliente MCP
 
-Para usar com o Claude Desktop, Antigravity, ou outro cliente compatível, configure-o para executar o script via Node injetando as variáveis de ambiente necessárias.
+O servidor roda via stdio (`node dist/index.js` + variáveis de ambiente), então qualquer cliente MCP compatível pode registrá-lo. Abaixo, exemplos por cliente.
 
-Exemplo de configuração (ex: `claude_desktop_config.json` ou arquivo `.mcp.json`):
+### Claude Desktop / Claude Code
+
+Arquivo `claude_desktop_config.json` (Desktop) ou `.mcp.json` (Claude Code, na raiz do projeto):
 
 ```json
 {
@@ -77,6 +79,90 @@ Exemplo de configuração (ex: `claude_desktop_config.json` ou arquivo `.mcp.jso
   }
 }
 ```
+
+### Antigravity (IDE e CLI)
+
+Arquivo `~/.gemini/config/mcp_config.json` (global) ou `.agents/mcp_config.json` (por workspace):
+
+```json
+{
+  "mcpServers": {
+    "glpi-v2": {
+      "command": "node",
+      "args": [
+        "caminho/absoluto/para/glpi-mcp-v2/dist/index.js"
+      ],
+      "env": {
+        "GLPI_BASE_URL": "http://localhost:8080",
+        "GLPI_CLIENT_ID": "seu_client_id_oauth2",
+        "GLPI_CLIENT_SECRET": "seu_client_secret_oauth2",
+        "GLPI_USERNAME": "usuario_glpi",
+        "GLPI_PASSWORD": "senha_glpi"
+      }
+    }
+  }
+}
+```
+
+### Codex CLI (OpenAI)
+
+Arquivo `~/.codex/config.toml` (global) ou `.codex/config.toml` (por projeto, em ambiente confiável):
+
+```toml
+[mcp_servers.glpi-v2]
+command = "node"
+args = ["caminho/absoluto/para/glpi-mcp-v2/dist/index.js"]
+
+[mcp_servers.glpi-v2.env]
+GLPI_BASE_URL = "http://localhost:8080"
+GLPI_CLIENT_ID = "seu_client_id_oauth2"
+GLPI_CLIENT_SECRET = "seu_client_secret_oauth2"
+GLPI_USERNAME = "usuario_glpi"
+GLPI_PASSWORD = "senha_glpi"
+```
+
+Ou via `codex mcp add glpi-v2 --command node --args caminho/absoluto/para/glpi-mcp-v2/dist/index.js` (interativo, para as env vars).
+
+### Hermes Agent
+
+```bash
+hermes mcp add glpi-v2 --command "node caminho/absoluto/para/glpi-mcp-v2/dist/index.js"
+```
+
+As variáveis de ambiente (`GLPI_BASE_URL`, `GLPI_CLIENT_ID`, etc.) devem estar disponíveis no ambiente onde o Hermes é executado, ou configuradas via `.env` no diretório do projeto (o servidor as carrega via `dotenv`, se aplicável — confira `src/config.ts`).
+
+### OpenClaw
+
+Arquivo `~/.openclaw/openclaw.json`:
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "glpi-v2": {
+        "command": "node",
+        "args": [
+          "caminho/absoluto/para/glpi-mcp-v2/dist/index.js"
+        ],
+        "transport": "stdio",
+        "env": {
+          "GLPI_BASE_URL": "http://localhost:8080",
+          "GLPI_CLIENT_ID": "seu_client_id_oauth2",
+          "GLPI_CLIENT_SECRET": "seu_client_secret_oauth2",
+          "GLPI_USERNAME": "usuario_glpi",
+          "GLPI_PASSWORD": "senha_glpi"
+        }
+      }
+    }
+  }
+}
+```
+
+> **Nota:** os exemplos de Hermes Agent e OpenClaw acima seguem a documentação pública de cada projeto no momento da escrita, mas não foram testados diretamente contra este servidor. Valide a conexão localmente (liste as tools expostas) antes de depender em produção.
+
+### Alternativa: transporte HTTP
+
+Se o cliente não suportar stdio, o servidor também expõe `StreamableHTTPServerTransport` (ver `src/httpServer.ts`). Defina `MCP_TRANSPORT=http` e, opcionalmente, `MCP_HTTP_PORT` (padrão `3000`) nas variáveis de ambiente do processo. O endpoint fica em `http://localhost:<porta>/mcp` (POST) — aponte o cliente para essa URL em vez de um comando local.
 
 ## 📄 Spec OpenAPI (referência de desenvolvimento)
 
