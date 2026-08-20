@@ -18,6 +18,7 @@ The GLPI MCP v2 has several tools. Pick the one that matches the question — do
 | Full context on ONE ticket (timeline, followups, tasks, solutions, documents, logs) | `glpi_get_ticket` | One call replaces multiple. It includes the `timeline` inline. |
 | Knowledge base lookup | `glpi_search_knowbase` | |
 | Read full knowledge base article | `glpi_get_knowbase_item` | |
+| FAQ / dúvida rápida de uso do GLPI (antes de abrir ticket) | `glpi_search_faq` | Filtra `is_faq==true`. Pass `query` for a text match on title/content. |
 | User context (who they are, groups, managed items) | `glpi_get_user_context` | |
 | Search for a user | `glpi_search_user` | |
 | Assets / Hardware specs | `glpi_list_computers` | Use `include_specs=true` if hardware specs are needed. |
