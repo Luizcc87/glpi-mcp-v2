@@ -1,0 +1,29 @@
+# Compose local do GLPI MCP server. Builda a partir do Dockerfile deste mesmo
+# diretório — mesma imagem publicada no Docker Hub como lc1868/glpi-mcp-v2, aqui
+# builda local em vez de puxar do registry, pra desenvolvimento/teste refletir
+# mudanças no código sem precisar rebuild+push.
+#
+# Antes deste compose existir, o GLPI MCP rodava como processo Node solto no host
+# (nohup node dist/index.js), o que não sobrevivia a restart/reboot — inconsistente
+# com o resto da stack de quem consome este repositório (tudo em container Docker).
+
+networks:
+  hermes-stack:
+    name: hermes-stack
+    external: true
+
+services:
+  glpi-mcp:
+    build: .
+    container_name: glpi-mcp
+    restart: unless-stopped
+    environment:
+      - MCP_TRANSPORT=http
+      - MCP_HTTP_PORT=3000
+      - GLPI_URL=${GLPI_URL}
+      - GLPI_APP_TOKEN=${GLPI_APP_TOKEN}
+      - GLPI_USER_TOKEN=${GLPI_USER_TOKEN}
+    ports:
+      - "127.0.0.1:3001:3000"
+    networks:
+      - hermes-stack
