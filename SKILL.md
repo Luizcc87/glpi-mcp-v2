@@ -9,8 +9,8 @@ How to query and operate the GLPI MCP server and deliver in-depth ITSM analysis 
 
 ## Architecture & API Protocol
 
-The server acts as a unified gateway supporting 30 tools:
-- **API v2 (High-Level REST API via OAuth2)**: Handles Tickets, Problems, Changes, Assets, Users/Groups, and Statistics. Uses named fields, RSQL filtering, and inlined timelines.
+The server acts as a unified gateway supporting 31 tools:
+- **API v2 (High-Level REST API via OAuth2)**: Handles Tickets, Problems, Changes, Assets, Users/Groups, Plugins, and Statistics. Uses named fields, RSQL filtering, and inlined timelines.
 - **API v1 (Legacy REST API via App-Token & User-Token)**: Handles Knowledge Base tools (`glpi_search_knowbase`, `glpi_get_knowbase_item`, `glpi_search_faq`) because GLPI High-Level API versions < 2.2.0 lack knowledge base controllers (returning 404).
 
 ## Tool Selection Matrix
@@ -41,6 +41,7 @@ Pick the tool that precisely matches the question:
 | **Users** | User context (managed/used assets) | `glpi_get_user_context` | Inlines user's used and managed hardware. |
 | **Users** | Search users | `glpi_search_user` | Filters by name or login. |
 | **Groups** | List support / technician groups | `glpi_list_groups` | For routing tickets/changes to proper teams. |
+| **Plugins** | List installed plugins & status | `glpi_list_plugins` | Returns plugin names, versions, active/inactive status. |
 
 ---
 

@@ -20,7 +20,7 @@ São providas ferramentas focadas em produtividade, incluindo:
 - **Assistance**: Criação, atualização, busca (com filtros RSQL) e leitura completa (incluindo timeline em 1 request) de Tickets, Problems e Changes. Estatísticas e adição de follow-ups.
 - **Knowledgebase**: Busca e leitura de artigos.
 - **Assets**: Listagem e leitura de Computers (com flag para inclusão de specs detalhadas).
-- **Administration**: Busca de usuários, leitura de contexto de usuário e listagem de grupos.
+- **Administration**: Busca de usuários, leitura de contexto de usuário, listagem de grupos e plug-ins instalados.
 
 ## 🛠 Instalação
 

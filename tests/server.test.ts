@@ -22,7 +22,7 @@ describe('GLPI MCP Server Integration', () => {
     vi.restoreAllMocks();
   });
 
-  it('should register and list all 30 tools', async () => {
+  it('should register and list all 31 tools', async () => {
     const server = createServer();
     // Use request handler for ListTools
     const handlers = (server as any)._requestHandlers;
@@ -30,7 +30,7 @@ describe('GLPI MCP Server Integration', () => {
     expect(listHandler).toBeDefined();
 
     const result = await listHandler({ method: 'tools/list', params: {} });
-    expect(result.tools).toHaveLength(30);
+    expect(result.tools).toHaveLength(31);
 
     const toolNames = result.tools.map((t: any) => t.name);
     // Assistance: Ticket (7)
@@ -69,10 +69,11 @@ describe('GLPI MCP Server Integration', () => {
     expect(toolNames).toContain('glpi_list_computers');
     expect(toolNames).toContain('glpi_get_computer');
 
-    // Administration (3)
+    // Administration (4)
     expect(toolNames).toContain('glpi_search_user');
     expect(toolNames).toContain('glpi_get_user_context');
     expect(toolNames).toContain('glpi_list_groups');
+    expect(toolNames).toContain('glpi_list_plugins');
 
     // Statistics (1)
     expect(toolNames).toContain('glpi_get_asset_stats');

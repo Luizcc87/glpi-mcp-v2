@@ -6,11 +6,11 @@ Este documento instrui agentes de IA (como Claude Code, Hermes Agent, Antigravit
 
 ## 1. Visão Geral e Arquitetura
 
-O **`glpi-mcp-v2`** é um servidor Model Context Protocol que funciona como um gateway unificado entre agentes de IA e a plataforma GLPI (versões 10 e 11), expondo **30 ferramentas** padronizadas com o prefixo `glpi_`.
+O **`glpi-mcp-v2`** é um servidor Model Context Protocol que funciona como um gateway unificado entre agentes de IA e a plataforma GLPI (versões 10 e 11), expondo **31 ferramentas** padronizadas com o prefixo `glpi_`.
 
 ### Arquitetura Híbrida (v2 + v1)
 - **API v2 (High-Level REST API via OAuth2)**:
-  - Usada por **27 ferramentas**: Tickets, Problems, Changes, Assets (Computers), Administração (Users/Groups) e Estatísticas.
+  - Usada por **28 ferramentas**: Tickets, Problems, Changes, Assets (Computers), Administração (Users/Groups/Plugins) e Estatísticas.
   - Vantagens: traz dados completos com **timeline embutida em 1 requisição**, suporta filtros RSQL e autenticação JWT Bearer sem gerenciamento de sessão PHP em memória.
 - **API v1 (API REST Legada via App-Token & User-Token)**:
   - Usada exclusivamente pelas **3 ferramentas de Base de Conhecimento** (`glpi_search_knowbase`, `glpi_get_knowbase_item`, `glpi_search_faq`).
@@ -61,6 +61,7 @@ O **`glpi-mcp-v2`** é um servidor Model Context Protocol que funciona como um g
 | **Admin** | Buscar usuários pelo nome ou login | `glpi_search_user` | `filter: "name=*termo*"` |
 | **Admin** | Obter perfil e ativos vinculados a um usuário | `glpi_get_user_context` | `id` |
 | **Admin** | Listar grupos técnicos e de suporte | `glpi_list_groups` | `filter` |
+| **Admin** | Listar plug-ins instalados e status (ativo/inativo) | `glpi_list_plugins` | `filter` (ex: `is_active==true`) |
 
 ---
 

@@ -19,8 +19,8 @@ Adapted for the new GLPI v2.3 API (OAuth2). Thanks to the original authors (GMS6
 Productivity-focused tools, including:
 - **Assistance**: Creation, update, search (with RSQL filters), and full read (including timeline in 1 request) of Tickets, Problems, and Changes. Statistics and follow-up additions.
 - **Knowledgebase**: Article search and reading, including FAQ-flagged articles.
-- **Assets**: Listing and reading of Computers (with a flag to include detailed specs).
-- **Administration**: User search, user context reading, and group listing.
+- **Assets**: Listing and reading Computers (with flag to include hardware/software specs).
+- **Administration**: User search, user context, listing groups and installed plugins.
 
 ## 🛠 Installation
 

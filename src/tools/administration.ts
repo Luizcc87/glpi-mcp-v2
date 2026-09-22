@@ -87,5 +87,38 @@ export const adminTools: GlpiTool[] = [
             const items = await glpiRequest('GET', `/Administration/Group`, { params });
             return { content: [{ type: "text", text: JSON.stringify(items, null, 2) }] };
         }
+    },
+    {
+        tool: {
+            name: "glpi_list_plugins",
+            description: "Lista os plug-ins instalados no GLPI, incluindo nome, versão, status (ativo/inativo) e capacidades.",
+            inputSchema: {
+                type: "object",
+                properties: {
+                    start: { type: "number", description: "Início da paginação (offset)" },
+                    limit: { type: "number", description: "Limite de itens por página" },
+                    filter: { type: "string", description: "Filtro em RSQL (ex: is_active==true)" }
+                }
+            }
+        },
+        handler: async (args: any) => {
+            const params: any = {};
+            if (args.start !== undefined) params.start = args.start;
+            if (args.limit !== undefined) params.limit = args.limit;
+            if (args.filter !== undefined) params.filter = args.filter;
+
+            try {
+                const items = await glpiRequest('GET', `/Setup/Plugin`, { params });
+                return { content: [{ type: "text", text: JSON.stringify(items, null, 2) }] };
+            } catch (error: any) {
+                try {
+                    const { glpiRequestV1 } = await import('../clientV1.js');
+                    const items = await glpiRequestV1('GET', `/Plugin`, { params });
+                    return { content: [{ type: "text", text: JSON.stringify(items, null, 2) }] };
+                } catch {
+                    throw error;
+                }
+            }
+        }
     }
 ];
