@@ -21,7 +21,7 @@ São providas ferramentas focadas em produtividade, incluindo:
 - **Knowledgebase**: Busca e leitura de artigos.
 - **Assets**: Listagem e leitura de Computers (com flag para inclusão de specs detalhadas).
 - **Administration**: Busca de usuários, leitura de contexto de usuário e listagem de grupos.
-- **Plug-ins**: Auditoria de plug-ins instalados (`glpi_list_plugins`) identificando versão e status (`state`: 2=Ativo, 1=Instalado/desativado, 0=Disponível).
+- **Plug-ins**: Auditoria de plug-ins instalados (`glpi_list_plugins`) identificando versão e status (`state`: 1=Ativo/ACTIVATED, 4=Instalado/NOTACTIVATED, 2=Não instalado).
 
 ## 🛠 Instalação
 

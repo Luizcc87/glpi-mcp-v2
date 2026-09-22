@@ -21,7 +21,7 @@ Productivity-focused tools, including:
 - **Knowledgebase**: Article search and reading, including FAQ-flagged articles.
 - **Assets**: Listing and reading Computers (with flag to include hardware/software specs).
 - **Administration**: User search, user context, and group listing.
-- **Plug-ins**: Audit installed plug-ins (`glpi_list_plugins`) identifying version and status (`state`: 2=Active, 1=Installed/disabled, 0=Available).
+- **Plug-ins**: Audit installed plug-ins (`glpi_list_plugins`) identifying version and status (`state`: 1=Active/ACTIVATED, 4=Installed/NOTACTIVATED, 2=Not installed).
 
 ## 🛠 Installation
 

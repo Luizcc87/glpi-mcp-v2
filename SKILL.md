@@ -92,10 +92,15 @@ When a search returns more records than fit comfortably in context:
 ### Playbook 4: Plugin Health & Capability Verification
 1. When asked about environment capabilities, inventory status, custom fields, or extensions:
    - Call `glpi_list_plugins()`.
-   - Interpret the `state` attribute:
-     - `state: 2` 🟢 **Enabled / Active** (operational).
-     - `state: 1` 🟡 **Installed / Not Activated** (disabled).
-     - `state: 0` ⚪ **Not Installed / Available**.
+   - Interpret the `state` attribute (real values from GLPI core's `Plugin` class constants, `src/Plugin.php` — **do not assume the "intuitive" 0/1/2 order, it does not match real GLPI**):
+     - `state: 1` 🟢 **Enabled / Active** (`ACTIVATED`, operational).
+     - `state: 4` 🟡 **Installed / Not Activated** (`NOTACTIVATED`, disabled).
+     - `state: 2` ⚪ **Not Installed** (`NOTINSTALLED`).
+     - `state: 0` — Discovered, not yet installed (`ANEW`).
+     - `state: 3` — Installed, requires configuration (`TOBECONFIGURED`).
+     - `state: 5` — Plugin directory missing, DB cleanup needed (`TOBECLEANED`).
+     - `state: 6` — Files are for a newer version, update required (`NOTUPDATED`).
+     - `state: 7` — Replaced by another plugin (`REPLACED`).
 2. Recognize essential plugins:
    - `glpiinventory`: Automatic hardware/software asset discovery and agent reporting.
    - `fields`: Additional custom form fields.
@@ -103,7 +108,7 @@ When a search returns more records than fit comfortably in context:
    - `actualtime` / `activity`: Time tracking and service effort metrics.
    - `financial`: Extended budget, contract, and asset amortization tracking.
    - `dashboard`: ST-Dashboard / Executive KPI reporting.
-3. If an action or question depends on a plugin that is in `state: 1` or missing, notify the user with the exact status.
+3. If an action or question depends on a plugin that is in `state: 4` (not activated) or not installed (`state: 2`/`0`), notify the user with the exact status.
 
 ---
 
