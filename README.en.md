@@ -20,7 +20,8 @@ Productivity-focused tools, including:
 - **Assistance**: Creation, update, search (with RSQL filters), and full read (including timeline in 1 request) of Tickets, Problems, and Changes. Statistics and follow-up additions.
 - **Knowledgebase**: Article search and reading, including FAQ-flagged articles.
 - **Assets**: Listing and reading Computers (with flag to include hardware/software specs).
-- **Administration**: User search, user context, listing groups and installed plugins.
+- **Administration**: User search, user context, and group listing.
+- **Plug-ins**: Audit installed plug-ins (`glpi_list_plugins`) identifying version and status (`state`: 2=Active, 1=Installed/disabled, 0=Available).
 
 ## 🛠 Installation
 

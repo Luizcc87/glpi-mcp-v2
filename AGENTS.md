@@ -99,6 +99,22 @@ Apresente cada chamado em linha única e objetiva:
 2. Caso não exista:
    - Proponha a abertura de um Problem (`glpi_create_problem`) agrupando os incidentes identificados para investigação de causa-raiz.
 
+### Playbook: Auditoria e Diagnóstico de Plug-ins (`glpi_list_plugins`)
+1. Ao ser consultado sobre capacidades da instância, integrações ou status de extensões:
+   - Execute `glpi_list_plugins()`.
+   - Mapeie o campo `state` para orientar o usuário:
+     - `state: 2` 🟢 — **Habilitado / Ativo** (em execução normal).
+     - `state: 1` 🟡 — **Instalado / Não Ativado** (código presente, mas desabilitado no GLPI).
+     - `state: 0` ⚪ — **Não Instalado / Disponível**.
+2. Reconhecimento de plug-ins estratégicos:
+   - `glpiinventory`: Inventário automático de hardware/software via agentes de rede.
+   - `fields`: Campos personalizados nos formulários de tickets e ativos.
+   - `datainjection`: Importação em massa de dados via CSV.
+   - `activity` / `actualtime`: Apontamento de horas e esforço técnico.
+   - `financial`: Gestão avançada de contratos, orçamentos e amortizações.
+   - `dashboard`: Painéis visuais (ST-Dashboard).
+3. Se o usuário solicitar uma operação cujo plug-in correspondente esteja em `state: 1` ou não instalado, alerte-o explicitamente sobre o status da extensão.
+
 ---
 
 ## 6. Variáveis de Ambiente Necessárias

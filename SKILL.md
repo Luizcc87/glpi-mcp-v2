@@ -89,6 +89,22 @@ When a search returns more records than fit comfortably in context:
 - **Do not** write custom Python or shell one-liners to parse the file.
 - Delegate to an Explore/Subagent passing the file path, schema, and specific extraction question.
 
+### Playbook 4: Plugin Health & Capability Verification
+1. When asked about environment capabilities, inventory status, custom fields, or extensions:
+   - Call `glpi_list_plugins()`.
+   - Interpret the `state` attribute:
+     - `state: 2` 🟢 **Enabled / Active** (operational).
+     - `state: 1` 🟡 **Installed / Not Activated** (disabled).
+     - `state: 0` ⚪ **Not Installed / Available**.
+2. Recognize essential plugins:
+   - `glpiinventory`: Automatic hardware/software asset discovery and agent reporting.
+   - `fields`: Additional custom form fields.
+   - `datainjection`: Batch import/export tool.
+   - `actualtime` / `activity`: Time tracking and service effort metrics.
+   - `financial`: Extended budget, contract, and asset amortization tracking.
+   - `dashboard`: ST-Dashboard / Executive KPI reporting.
+3. If an action or question depends on a plugin that is in `state: 1` or missing, notify the user with the exact status.
+
 ---
 
 ## Environment Configuration
