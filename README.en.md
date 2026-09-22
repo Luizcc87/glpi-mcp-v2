@@ -44,7 +44,18 @@ GLPI_CLIENT_ID=your_oauth2_client_id
 GLPI_CLIENT_SECRET=your_oauth2_client_secret
 GLPI_USERNAME=glpi_user
 GLPI_PASSWORD=glpi_password
+
+# Optional: only required when using the 3 Knowledgebase tools (API v1)
+GLPI_API_V1_APP_TOKEN=your_v1_app_token
+GLPI_API_V1_USER_TOKEN=your_v1_user_token
 ```
+
+### Knowledgebase (Legacy API v1)
+Due to limitations in GLPI versions where the High-Level v2 API does not implement Knowledgebase controllers (returning 404 on `/Knowledgebase/Article`), the 3 Knowledgebase tools (`glpi_search_knowbase`, `glpi_get_knowbase_item`, and `glpi_search_faq`) use the **legacy API v1** (`/apirest.php/KnowbaseItem`).
+
+To use them, configure the optional environment variables:
+- `GLPI_API_V1_APP_TOKEN` (or `GLPI_APP_TOKEN`): generated under **Setup → General → API → API Clients**.
+- `GLPI_API_V1_USER_TOKEN` (or `GLPI_USER_TOKEN`): generated on the user profile in GLPI (API Keys tab).
 
 ### How to create the OAuth2 API Client in GLPI
 1. Access GLPI (version 11 / v2.3 enabled).

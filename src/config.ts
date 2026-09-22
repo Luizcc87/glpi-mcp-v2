@@ -7,6 +7,8 @@ export interface GlpiConfig {
   clientSecret: string;
   username: string;
   password: string;
+  apiV1AppToken?: string;
+  apiV1UserToken?: string;
 }
 
 export function loadConfig(): GlpiConfig {
@@ -16,6 +18,10 @@ export function loadConfig(): GlpiConfig {
     GLPI_CLIENT_SECRET,
     GLPI_USERNAME,
     GLPI_PASSWORD,
+    GLPI_API_V1_APP_TOKEN,
+    GLPI_API_V1_USER_TOKEN,
+    GLPI_APP_TOKEN,
+    GLPI_USER_TOKEN,
   } = process.env;
 
   if (!GLPI_BASE_URL) throw new Error('GLPI_BASE_URL is required');
@@ -30,5 +36,7 @@ export function loadConfig(): GlpiConfig {
     clientSecret: GLPI_CLIENT_SECRET,
     username: GLPI_USERNAME,
     password: GLPI_PASSWORD,
+    apiV1AppToken: GLPI_API_V1_APP_TOKEN || GLPI_APP_TOKEN,
+    apiV1UserToken: GLPI_API_V1_USER_TOKEN || GLPI_USER_TOKEN,
   };
 }

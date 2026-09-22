@@ -44,7 +44,18 @@ GLPI_CLIENT_ID=seu_client_id_oauth2
 GLPI_CLIENT_SECRET=seu_client_secret_oauth2
 GLPI_USERNAME=usuario_glpi
 GLPI_PASSWORD=senha_glpi
+
+# Opcional: apenas se for utilizar as 3 tools de Base de Conhecimento (API v1)
+GLPI_API_V1_APP_TOKEN=seu_app_token_v1
+GLPI_API_V1_USER_TOKEN=seu_user_token_v1
 ```
+
+### Base de Conhecimento (API v1 legada)
+Devido a limitações em versões do GLPI onde a API High-Level v2 ainda não implementa os controllers de Base de Conhecimento (retornando 404 em `/Knowledgebase/Article`), as 3 ferramentas de Knowledgebase (`glpi_search_knowbase`, `glpi_get_knowbase_item` e `glpi_search_faq`) utilizam a **API v1 legada** (`/apirest.php/KnowbaseItem`).
+
+Para usá-las, defina as variáveis opcionais:
+- `GLPI_API_V1_APP_TOKEN` (ou `GLPI_APP_TOKEN`): gerado em **Configurar → Geral → API → Clientes API**.
+- `GLPI_API_V1_USER_TOKEN` (ou `GLPI_USER_TOKEN`): gerado no perfil do usuário no GLPI (aba Chaves de API).
 
 ### Como criar o Cliente API OAuth2 no GLPI
 1. Acesse o GLPI (versão 11 / v2.3 habilitada).

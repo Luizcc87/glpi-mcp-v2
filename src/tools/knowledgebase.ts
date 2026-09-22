@@ -1,5 +1,19 @@
-import { glpiRequest } from "../client.js";
+import { glpiRequestV1 } from "../clientV1.js";
 import { GlpiTool } from "./assistance.js";
+
+function buildPagination(start?: number, limit?: number) {
+    if (start !== undefined || limit !== undefined) {
+        const s = start !== undefined ? start : 0;
+        const l = limit !== undefined ? limit : 20;
+        const end = s + l - 1;
+        const rangeVal = `${s}-${end}`;
+        return {
+            headers: { Range: rangeVal },
+            params: { range: rangeVal }
+        };
+    }
+    return { headers: {}, params: {} };
+}
 
 export const kbTools: GlpiTool[] = [
     {
@@ -11,19 +25,32 @@ export const kbTools: GlpiTool[] = [
                 properties: {
                     start: { type: "number", description: "Início da paginação (offset)" },
                     limit: { type: "number", description: "Limite de itens por página" },
-                    filter: { type: "string", description: "Filtro em RSQL (ex: name=*email*)" },
+                    filter: { type: "string", description: "Filtro em RSQL ou texto de busca (ex: name=*email*)" },
                     language: { type: "string", description: "Idioma do artigo" }
                 }
             }
         },
         handler: async (args: any) => {
             const params: any = {};
-            if (args.start !== undefined) params.start = args.start;
-            if (args.limit !== undefined) params.limit = args.limit;
-            if (args.filter !== undefined) params.filter = args.filter;
-            if (args.language !== undefined) params.language = args.language;
+            const headers: any = {};
+
+            if (args.start !== undefined || args.limit !== undefined) {
+                const pagination = buildPagination(args.start, args.limit);
+                Object.assign(headers, pagination.headers);
+                Object.assign(params, pagination.params);
+            }
+
+            if (args.filter !== undefined) {
+                const match = String(args.filter).match(/(?:name=\*?|query=)?(.*?)\*?$/);
+                const term = match && match[1] ? match[1] : args.filter;
+                params['searchText[name]'] = term;
+            }
+
+            if (args.language !== undefined) {
+                params.language = args.language;
+            }
             
-            const items = await glpiRequest('GET', `/Knowledgebase/Article`, { params });
+            const items = await glpiRequestV1('GET', `/KnowbaseItem`, { params, headers });
             return { content: [{ type: "text", text: JSON.stringify(items, null, 2) }] };
         }
     },
@@ -44,7 +71,7 @@ export const kbTools: GlpiTool[] = [
             const params: any = {};
             if (args.language !== undefined) params.language = args.language;
             
-            const item = await glpiRequest('GET', `/Knowledgebase/Article/${args.id}`, { params });
+            const item = await glpiRequestV1('GET', `/KnowbaseItem/${args.id}`, { params });
             return { content: [{ type: "text", text: JSON.stringify(item, null, 2) }] };
         }
     },
@@ -63,15 +90,26 @@ export const kbTools: GlpiTool[] = [
             }
         },
         handler: async (args: any) => {
-            const filters = ["is_faq==true"];
-            if (args.query) filters.push(`(name=*${args.query}*,content=*${args.query}*)`);
+            const params: any = {
+                'searchText[is_faq]': '1'
+            };
+            const headers: any = {};
 
-            const params: any = { filter: filters.join(";") };
-            if (args.start !== undefined) params.start = args.start;
-            if (args.limit !== undefined) params.limit = args.limit;
-            if (args.language !== undefined) params.language = args.language;
+            if (args.query) {
+                params['searchText[name]'] = args.query;
+            }
 
-            const items = await glpiRequest('GET', `/Knowledgebase/Article`, { params });
+            if (args.start !== undefined || args.limit !== undefined) {
+                const pagination = buildPagination(args.start, args.limit);
+                Object.assign(headers, pagination.headers);
+                Object.assign(params, pagination.params);
+            }
+
+            if (args.language !== undefined) {
+                params.language = args.language;
+            }
+
+            const items = await glpiRequestV1('GET', `/KnowbaseItem`, { params, headers });
             return { content: [{ type: "text", text: JSON.stringify(items, null, 2) }] };
         }
     }

@@ -1,95 +1,108 @@
 ---
 name: glpi-mcp-v2
-description: Analyze GLPI tickets at depth using the new GLPI v2 API. Pick the right MCP tool, pull full ticket content in one shot, and delegate large-result-set analysis to an Explore agent. Use when the user asks about GLPI tickets, requests patterns/themes across tickets, asks "what's happening with X", "find anything related to Y", "tickets this week/month", or invokes /glpi.
+description: Manage and analyze GLPI tickets, problems, changes, knowledge base, assets, and users using the GLPI MCP server. Pick the right tool, pull full item content and timelines in one shot, leverage knowledge base via API v1, and delegate large-result-set analysis to subagents. Use when querying GLPI, checking ticket/problem/change status, searching KB/FAQ, looking up user context or hardware assets, or invoking /glpi.
 ---
 
 # glpi-mcp-v2
 
-How to query the GLPI MCP (v2) and deliver in-depth analysis without burning the user's context or resorting to Python scripts.
+How to query and operate the GLPI MCP server and deliver in-depth ITSM analysis without burning context or resorting to ad-hoc scripts.
 
-## Tool selection
+## Architecture & API Protocol
 
-The GLPI MCP v2 has several tools. Pick the one that matches the question — don't default to the lowest-level one.
+The server acts as a unified gateway supporting 30 tools:
+- **API v2 (High-Level REST API via OAuth2)**: Handles Tickets, Problems, Changes, Assets, Users/Groups, and Statistics. Uses named fields, RSQL filtering, and inlined timelines.
+- **API v1 (Legacy REST API via App-Token & User-Token)**: Handles Knowledge Base tools (`glpi_search_knowbase`, `glpi_get_knowbase_item`, `glpi_search_faq`) because GLPI High-Level API versions < 2.2.0 lack knowledge base controllers (returning 404).
 
-| Question shape | Tool | Notes |
-|---|---|---|
-| "tickets today" / "tickets this week" / "by category" / "by assignee" | `glpi_search_tickets` | Use RSQL `filter` parameter. |
-| Deep analysis across many tickets (need the description text) | `glpi_search_tickets` | Use RSQL `filter`. The response includes named fields. |
-| Full context on ONE ticket (timeline, followups, tasks, solutions, documents, logs) | `glpi_get_ticket` | One call replaces multiple. It includes the `timeline` inline. |
-| Knowledge base lookup | `glpi_search_knowbase` | |
-| Read full knowledge base article | `glpi_get_knowbase_item` | |
-| FAQ / dúvida rápida de uso do GLPI (antes de abrir ticket) | `glpi_search_faq` | Filtra `is_faq==true`. Pass `query` for a text match on title/content. |
-| User context (who they are, groups, managed items) | `glpi_get_user_context` | |
-| Search for a user | `glpi_search_user` | |
-| Assets / Hardware specs | `glpi_list_computers` | Use `include_specs=true` if hardware specs are needed. |
+## Tool Selection Matrix
 
-**Field legend for Tickets (API v2.3)**:
-Unlike the legacy API, the v2.3 API uses named fields instead of numeric IDs.
-Common fields: `id`, `name` (title), `content` (description), `status`, `date_creation`, `closedate`, `urgency`, `impact`, `priority`, `itilcategories_id`, `users_id_recipient`.
+Pick the tool that precisely matches the question:
 
-**Status codes** (use the emoji when presenting to the user):
-- `1` New 🆕 · `2` Assigned 👤 · `3` Planned 📅 · `4` Waiting ⏸️ · `5` Solved ✅ · `6` Closed 🔒
+| Domain | Question / Use Case | Tool | Notes |
+|---|---|---|---|
+| **Tickets** | "tickets today", "by category", "by status" | `glpi_search_tickets` | Use RSQL `filter` (e.g. `status=1`, `name=*email*`). |
+| **Tickets** | Deep dive on ONE ticket | `glpi_get_ticket` | **One call**. Inlines `timeline` (followups, tasks, solutions). |
+| **Tickets** | Add follow-up note to ticket | `glpi_add_ticket_followup` | Supports `is_private` boolean. |
+| **Tickets** | Create new ticket | `glpi_create_ticket` | Pass `input` with `name`, `content`, `urgency`, etc. |
+| **Tickets** | Update ticket fields/status | `glpi_update_ticket` | Pass `id` and `input` object. |
+| **Tickets** | Ticket statistics | `glpi_get_ticket_stats` | Statistics for a specific ticket. |
+| **Problems** | Search or list recurring problems | `glpi_search_problems` | Use RSQL `filter`. |
+| **Problems** | Full problem context & timeline | `glpi_get_problem` | Inlines problem `timeline`. |
+| **Problems** | Create / update problem | `glpi_create_problem`, `glpi_update_problem` | For major incident root-cause management. |
+| **Problems** | Add follow-up to problem | `glpi_add_problem_followup` | Documents RCA steps. |
+| **Changes** | Search or list RFCs / changes | `glpi_search_changes` | Tracks infrastructure change management. |
+| **Changes** | Full change context & timeline | `glpi_get_change` | Inlines change `timeline`. |
+| **Changes** | Create / update change | `glpi_create_change`, `glpi_update_change` | Change request lifecycle. |
+| **Knowledge Base** | Search KB articles | `glpi_search_knowbase` | Uses API v1. Supports `filter`, `start`, `limit`. |
+| **Knowledge Base** | Read full article content | `glpi_get_knowbase_item` | Uses API v1. Returns full HTML/text content (`answer`). |
+| **Knowledge Base** | Search FAQ / Quick self-service | `glpi_search_faq` | Uses API v1 (`is_faq=1`). Query before creating a ticket. |
+| **Assets** | List computers & hardware | `glpi_list_computers` | Set `include_specs=true` to include CPU/RAM/disks/software. |
+| **Assets** | Full computer hardware/software | `glpi_get_computer` | Returns CPU, RAM, disks, network cards, and installed software. |
+| **Assets** | Asset stats | `glpi_get_asset_stats` | Pass `itemtype: "Ticket"|"Problem"|"Change"`. |
+| **Users** | User context (managed/used assets) | `glpi_get_user_context` | Inlines user's used and managed hardware. |
+| **Users** | Search users | `glpi_search_user` | Filters by name or login. |
+| **Groups** | List support / technician groups | `glpi_list_groups` | For routing tickets/changes to proper teams. |
 
-## Rule: never write Python to mine a saved GLPI dump
+---
 
-When a GLPI tool returns more data than fits in context, the harness saves it to disk and returns a file path. **Do not write a Python script, `python -c` one-liner, or `jq` pipeline to analyze that file.** Spawn an Explore agent with the file path and the question.
+## Field Legend & Status Codes (ITSM)
 
-Python-on-saved-files is unnecessary ceremony. The agent path is shorter, cleaner, and keeps raw JSON out of the main context. The only justified exception is a precise numeric aggregate across thousands of rows where determinism matters — and even then, say so explicitly first.
+### Tickets, Problems & Changes
+Common named fields: `id`, `name` (title), `content` (description/HTML), `status`, `urgency`, `impact`, `priority`, `date_creation`, `date_mod`, `time_to_resolve`.
 
-## Step-by-step for deep analysis across many tickets
+**Status Codes & Presentation:**
+- `1` New 🆕
+- `2` Assigned / In Progress 👤
+- `3` Planned 📅
+- `4` Waiting / Pending ⏸️
+- `5` Solved ✅
+- `6` Closed 🔒
 
-Use this flow when the user asks "find anything related to X in GLPI" or "what's going on with Y this month" — anything that needs the ticket **descriptions**, not just titles.
+**Ticket Listing Format:**
+When presenting ticket lists to the user, follow this concise single-line format:
+`HH:MM [<emoji>] — <Status> — #<id> <title> · <category>`
 
-### 1. Pull the data in ONE filtered call
+---
 
-Use `glpi_search_tickets` with RSQL filters. Filter at the MCP layer — date range, category, text — don't pull everything and filter later.
+## Agent Playbooks for Hermes and Claude
 
-Example criteria (RSQL):
+### Playbook 1: Ticket Triage & First-Line Response
+1. When an alert or ticket inquiry arrives:
+   - Call `glpi_get_ticket(id=N)` to pull the ticket and its full timeline in a single call.
+2. Before answering or proposing a fix:
+   - Search the knowledge base using `glpi_search_faq(query="...")` or `glpi_search_knowbase(filter="...")`.
+   - If relevant procedures or known solutions exist, quote the solution and cite the article ID.
+3. If proposing a follow-up:
+   - Draft the followup message and call `glpi_add_ticket_followup(id=N, content="...", is_private=false)`.
+
+### Playbook 2: Recurring Incident to Problem Escalation
+1. If multiple tickets report the same symptom (e.g. switch flap, high load, service down):
+   - Use `glpi_search_tickets(filter="name=*<keyword>*;status<5")` to find all active related tickets.
+   - Use `glpi_search_problems(filter="name=*<keyword>*")` to check if a known Problem already exists.
+2. If no Problem exists:
+   - Propose creating a Problem record via `glpi_create_problem(input={ name: "...", content: "..." })`.
+   - Remind the user of human approval gate before destructive or state-changing actions.
+
+### Playbook 3: Large Result Set Analysis
+When a search returns more records than fit comfortably in context:
+- The harness saves the response to disk.
+- **Do not** write custom Python or shell one-liners to parse the file.
+- Delegate to an Explore/Subagent passing the file path, schema, and specific extraction question.
+
+---
+
+## Environment Configuration
+
+Ensure the following variables are configured:
+
+```env
+# API v2 (Required for Tickets, Problems, Changes, Assets, Admin)
+GLPI_BASE_URL=http://<glpi-host>:8080
+GLPI_CLIENT_ID=<oauth2_client_id>
+GLPI_CLIENT_SECRET=<oauth2_client_secret>
+GLPI_USERNAME=<username>
+GLPI_PASSWORD=<password>
+
+# API v1 (Required for Knowledge Base tools: glpi_search_knowbase, glpi_get_knowbase_item, glpi_search_faq)
+GLPI_API_V1_APP_TOKEN=<app_token>
+GLPI_API_V1_USER_TOKEN=<user_token>
 ```
-name=*ANA Prevention* and date_creation>2026-04-01 and date_creation<2026-05-01
-```
-
-Expect the response to exceed token limits and save to disk. That's fine — note the file path.
-
-### 2. Spawn an Explore agent on the saved file
-
-`Agent(subagent_type=Explore)` with a self-contained prompt that includes:
-- **File path** (absolute).
-- **Schema:** Array of JSON objects, each with named fields (`name`, `content`, `status`, etc.).
-- **The actual question** — be specific. Not "summarize this" but "find tickets mentioning a new module called X; quote verbatim; return ids".
-- **Output shape:** "under 400 words", named sections, verbatim quotes for key evidence, explicit "nothing found" when applicable.
-
-### 3. Always go broad on the first pass — never narrow-first
-
-Never run a narrow keyword scan and then "broaden if the user asks for more". The first Explore agent prompt must already hunt for direct keyword hits, indirect signals, adjacent systems, generic new-module / rollout signals, and regressions.
-
-## Step-by-step for single-ticket deep dives
-
-When the user asks about ONE ticket:
-1. Call `glpi_get_ticket(id=N)`. One call. It returns expanded fields + timeline.
-2. **Never** fan out into `glpi_get_ticket_timeline` unless you only need the timeline. Everything is already in the `glpi_get_ticket` response.
-3. Quote verbatim from `content` and from the relevant `timeline` entries when explaining what happened.
-
-## Presentation rules
-
-When listing tickets to the user:
-- Use the format from the MCP server instructions:
-  `HH:MM [<emoji>] — <Status> — #<id> <title> · <category>`
-- One ticket per line. No numbered list.
-- Bold totals or category counts if the user asked for a breakdown.
-
-When presenting analysis results from an agent:
-- Quote verbatim from ticket content for key evidence. Paraphrase loses nuance.
-- Include ticket ids so the user can open each in GLPI.
-- Group findings by theme (module, site, user, etc.), not chronologically.
-- End with a one-line risk verdict if the user asked "what's the situation" — don't volunteer it otherwise.
-
-## Rules
-
-- **Filter at the MCP layer.** Use RSQL filters for `glpi_search_tickets`. Don't pull 1000 tickets and filter locally.
-- **Bundled over fan-out.** `glpi_get_ticket` for single tickets; `glpi_search_tickets` for filtered lists.
-- **Never write Python to analyze a saved GLPI dump.** Spawn an Explore agent.
-- **Never call `glpi_get_ticket_timeline` alongside `glpi_get_ticket`.** The timeline is inlined.
-- **Always broad on the first pass.** Never narrow-then-broader.
-- **Never paraphrase key evidence.** Verbatim quotes for anything load-bearing.
-- **Never skip the emoji/status format** when listing tickets.
