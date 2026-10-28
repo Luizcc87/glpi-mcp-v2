@@ -36,7 +36,7 @@ Pick the tool that precisely matches the question:
 | **Knowledge Base** | Read full article content | `glpi_get_knowbase_item` | Uses API v1. Returns full HTML/text content (`answer`). |
 | **Knowledge Base** | Search FAQ / Quick self-service | `glpi_search_faq` | Uses API v1 (`is_faq=1`). Query before creating a ticket. |
 | **Assets** | List computers & hardware | `glpi_list_computers` | Set `include_specs=true` to include CPU/RAM/disks/software. |
-| **Assets** | Full computer hardware/software | `glpi_get_computer` | Returns CPU, RAM, disks, network cards, and installed software. |
+| **Assets** | Full computer hardware/software | `glpi_get_computer` | Returns CPU, RAM, disks, network cards, and installed software (via API v1; needs `GLPI_API_V1_*` tokens). Optional `software_filter` (name contains). |
 | **Assets** | Asset stats | `glpi_get_asset_stats` | Pass `itemtype: "Ticket"|"Problem"|"Change"`. |
 | **Users** | User context (managed/used assets) | `glpi_get_user_context` | Inlines user's used and managed hardware. |
 | **Users** | Search users | `glpi_search_user` | Filters by name or login. |

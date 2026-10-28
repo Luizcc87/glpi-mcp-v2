@@ -56,7 +56,7 @@ O **`glpi-mcp-v2`** é um servidor Model Context Protocol que funciona como um g
 | **Knowledgebase** | Ler conteúdo completo de um artigo | `glpi_get_knowbase_item` | `id` |
 | **Knowledgebase** | Dúvidas rápidas de FAQ antes de abrir chamado | `glpi_search_faq` | `query` (termo de busca) |
 | **Assets** | Listar computadores e servidores no parque | `glpi_list_computers` | `filter`, `include_specs: true` (se precisar de CPU/RAM/Disco) |
-| **Assets** | Contexto completo de 1 computador (hardware + software) | `glpi_get_computer` | `id` |
+| **Assets** | Contexto completo de 1 computador (hardware + software) | `glpi_get_computer` | `id`, `software_filter` (opcional; software vem da API v1) |
 | **Assets** | Estatísticas de ativos vinculados a ITSM | `glpi_get_asset_stats` | `itemtype: "Ticket"|"Problem"|"Change"` |
 | **Admin** | Buscar usuários pelo nome ou login | `glpi_search_user` | `filter: "name=*termo*"` |
 | **Admin** | Obter perfil e ativos vinculados a um usuário | `glpi_get_user_context` | `id` |

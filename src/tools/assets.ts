@@ -1,15 +1,35 @@
 import { glpiRequest } from "../client.js";
+import { glpiRequestV1 } from "../clientV1.js";
 import { GlpiTool } from "./assistance.js";
 
-async function getComputerSpecs(id: number) {
+// A API v2 (High-Level 2.1) nao tem rota para o software instalado num computador.
+// A v1 entrega a lista em GET /Computer/{id}?with_softwares=true; com expand_dropdowns
+// os ids de software, versao e categoria ja vem como nomes.
+async function getComputerSoftware(id: number, filter?: string) {
+    const computer = await glpiRequestV1<any>('GET', `/Computer/${id}`, {
+        params: { with_softwares: true, expand_dropdowns: true }
+    });
+    const items = Array.isArray(computer?._softwares) ? computer._softwares : [];
+    const needle = filter ? filter.toLowerCase() : undefined;
+    return items
+        .map((s: any) => ({
+            name: s.softwares_id,
+            version: s.softwareversions_id,
+            category: s.softwarecategories_id || null,
+            is_dynamic: Boolean(s.is_dynamic),
+            is_valid: Boolean(s.is_valid)
+        }))
+        .filter((s: any) => !needle || String(s.name).toLowerCase().includes(needle));
+}
+
+async function getComputerSpecs(id: number, softwareFilter?: string) {
     const specs: any = {};
     const endpoints = [
         { key: 'processors', path: `/Assets/Computer/${id}/Component/Processor` },
         { key: 'memory', path: `/Assets/Computer/${id}/Component/Memory` },
         { key: 'hardDrives', path: `/Assets/Computer/${id}/Component/HardDrive` },
         { key: 'drives', path: `/Assets/Computer/${id}/Component/Drive` },
-        { key: 'networkCards', path: `/Assets/Computer/${id}/Component/NetworkCard` },
-        { key: 'software', path: `/Assets/Computer/${id}/SoftwareInstallation` }
+        { key: 'networkCards', path: `/Assets/Computer/${id}/Component/NetworkCard` }
     ];
 
     for (const ep of endpoints) {
@@ -19,6 +39,13 @@ async function getComputerSpecs(id: number) {
         } catch (e) {
             // Ignore if sub-resource fails
         }
+    }
+
+    try {
+        specs.software = await getComputerSoftware(id, softwareFilter);
+    } catch (e: any) {
+        // Sem tokens da v1 ou sem permissao: informa em vez de omitir em silencio
+        specs.software_error = e?.message ?? String(e);
     }
     return specs;
 }
@@ -63,7 +90,8 @@ export const assetTools: GlpiTool[] = [
             inputSchema: {
                 type: "object",
                 properties: {
-                    id: { type: "number", description: "ID do computador" }
+                    id: { type: "number", description: "ID do computador" },
+                    software_filter: { type: "string", description: "Filtra o software instalado pelo nome (contém, sem diferenciar maiúsculas). Ex: Sysmo" }
                 },
                 required: ["id"]
             }
@@ -71,7 +99,7 @@ export const assetTools: GlpiTool[] = [
         handler: async (args: any) => {
             const id = args.id;
             const computer = await glpiRequest<any>('GET', `/Assets/Computer/${id}`);
-            const specs = await getComputerSpecs(id);
+            const specs = await getComputerSpecs(id, args.software_filter);
             const result = {
                 ...computer,
                 specs
