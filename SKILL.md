@@ -1,6 +1,6 @@
 ---
 name: glpi-mcp-v2
-description: Manage and analyze GLPI tickets, problems, changes, knowledge base, assets, and users using the GLPI MCP server. Pick the right tool, pull full item content and timelines in one shot, leverage knowledge base via API v1, and delegate large-result-set analysis to subagents. Use when querying GLPI, checking ticket/problem/change status, searching KB/FAQ, looking up user context or hardware assets, or invoking /glpi.
+description: Manage and analyze GLPI tickets, problems, changes, projects, knowledge base, assets, and users using the GLPI MCP server. Pick the right tool, pull full item content and timelines in one shot, leverage knowledge base and projects via API v1, and delegate large-result-set analysis to subagents. Use when querying GLPI, checking ticket/problem/change/project status, searching KB/FAQ, looking up user context or hardware assets, or invoking /glpi.
 ---
 
 # glpi-mcp-v2
@@ -9,9 +9,16 @@ How to query and operate the GLPI MCP server and deliver in-depth ITSM analysis 
 
 ## Architecture & API Protocol
 
-The server acts as a unified gateway supporting 31 tools:
-- **API v2 (High-Level REST API via OAuth2)**: Handles Tickets, Problems, Changes, Assets, Users/Groups, Plugins, and Statistics. Uses named fields, RSQL filtering, and inlined timelines.
-- **API v1 (Legacy REST API via App-Token & User-Token)**: Handles Knowledge Base tools (`glpi_search_knowbase`, `glpi_get_knowbase_item`, `glpi_search_faq`) because GLPI High-Level API versions < 2.2.0 lack knowledge base controllers (returning 404).
+The server acts as a unified gateway supporting 41 tools:
+- **API v2 (High-Level REST API via OAuth2)**: Handles Tickets, Problems, Changes, Assets (hardware), Users/Groups, Plugins, and Statistics. Uses named fields, RSQL filtering, and inlined timelines.
+- **API v1 (Legacy REST API via App-Token & User-Token)**:
+  - **Knowledge Base** (`glpi_search_knowbase`, `glpi_get_knowbase_item`, `glpi_search_faq`): GLPI High-Level API versions < 2.2.0 lack knowledge base controllers (returning 404).
+  - **Installed Software** (`glpi_get_computer`): High-Level API 2.1 lacks an installed software route.
+  - **Projects** (10 tools: `glpi_search_projects`, `glpi_get_project`, `glpi_create_project`, `glpi_update_project`, `glpi_create_project_task`, `glpi_update_project_task`, `glpi_link_project_itil`, `glpi_link_task_ticket`, `glpi_add_project_team`, `glpi_list_project_states`): **Projects use API v1 because the GLPI 11 API v2 schema only exposes `name`, `code`, `content`, `priority`, and `entity`** (omitting dates, states, progress, tasks, team, and ITIL links). No delete tools are exposed.
+
+### Read-Only Mode (`GLPI_MCP_MODE`)
+- Set `GLPI_MCP_MODE=read` to run the server in read-only mode (default is `write`; invalid values throw an error at server startup).
+- In `read` mode, write tools (`/^glpi_(create|update|add|link|delete)_/`) are omitted from `tools/list` and blocked on `tools/call` with `isError: true`.
 
 ## Tool Selection Matrix
 
@@ -35,6 +42,14 @@ Pick the tool that precisely matches the question:
 | **Knowledge Base** | Search KB articles | `glpi_search_knowbase` | Uses API v1. Supports `filter`, `start`, `limit`. |
 | **Knowledge Base** | Read full article content | `glpi_get_knowbase_item` | Uses API v1. Returns full HTML/text content (`answer`). |
 | **Knowledge Base** | Search FAQ / Quick self-service | `glpi_search_faq` | Uses API v1 (`is_faq=1`). Query before creating a ticket. |
+| **Projects** | Search or list projects | `glpi_search_projects` | Uses API v1 (`expand_dropdowns=true`). Supports `start`, `limit`, `searchText`. |
+| **Projects** | Full project context (tasks, team, ITIL) | `glpi_get_project` | Uses API v1. Fetches project + `ProjectTask`, `ProjectTeam`, `Itil_Project` in parallel. |
+| **Projects** | List valid project states | `glpi_list_project_states` | Uses API v1 (`GET /ProjectState`) to discover state IDs before creating/updating. |
+| **Projects** | Create / update project | `glpi_create_project`, `glpi_update_project` | Uses API v1. Dates use `'YYYY-MM-DD HH:MM:SS'`. Unknown keys are stripped. |
+| **Projects** | Create / update project task | `glpi_create_project_task`, `glpi_update_project_task` | Uses API v1. Supports subtasks (`projecttasks_id`) and milestones (`is_milestone`). |
+| **Projects** | Link ITIL item to project | `glpi_link_project_itil` | Uses API v1 (`POST /Itil_Project`). `itemtype`: `Ticket`, `Change`, or `Problem`. |
+| **Projects** | Link ticket to project task | `glpi_link_task_ticket` | Uses API v1 (`POST /ProjectTask_Ticket`). |
+| **Projects** | Add member to project team | `glpi_add_project_team` | Uses API v1 (`POST /ProjectTeam`). `itemtype`: `User`, `Group`, `Supplier`, or `Contact`. |
 | **Assets** | List computers & hardware | `glpi_list_computers` | Set `include_specs=true` to include CPU/RAM/disks/software. |
 | **Assets** | Full computer hardware/software | `glpi_get_computer` | Returns CPU, RAM, disks, network cards, and installed software (via API v1; needs `GLPI_API_V1_*` tokens). Optional `software_filter` (name contains). |
 | **Assets** | Asset stats | `glpi_get_asset_stats` | Pass `itemtype: "Ticket"|"Problem"|"Change"`. |
@@ -124,7 +139,18 @@ GLPI_CLIENT_SECRET=<oauth2_client_secret>
 GLPI_USERNAME=<username>
 GLPI_PASSWORD=<password>
 
-# API v1 (Required for Knowledge Base tools: glpi_search_knowbase, glpi_get_knowbase_item, glpi_search_faq)
+# API v1 (Required for Knowledge Base, Projects, and Computer installed software)
 GLPI_API_V1_APP_TOKEN=<app_token>
 GLPI_API_V1_USER_TOKEN=<user_token>
+
+# Access Mode: 'write' (default) or 'read' (read-only; hides and blocks write tools)
+GLPI_MCP_MODE=write
+
+# HTTP Transport (optional; default is stdio)
+MCP_TRANSPORT=http
+MCP_HTTP_PORT=3000
+# Required in HTTP mode: clients must send "Authorization: Bearer <MCP_HTTP_TOKEN>" on POST /mcp
+# GET /health is unauthenticated and returns {"ok": true, "mode": "read"|"write"}
+MCP_HTTP_TOKEN=<strong_random_token>
+# Only set MCP_HTTP_ALLOW_NO_AUTH=1 to explicitly run HTTP without auth (logs a warning to stderr)
 ```

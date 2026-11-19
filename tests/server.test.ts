@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createServer } from '../src/server.js';
+import { createServer, isWriteTool } from '../src/server.js';
 import * as client from '../src/client.js';
+import * as clientV1 from '../src/clientV1.js';
 
 vi.mock('../src/client.js', () => ({
   glpiRequest: vi.fn(),
@@ -13,16 +14,29 @@ vi.mock('../src/client.js', () => ({
   }))
 }));
 
+vi.mock('../src/clientV1.js', () => ({
+  glpiRequestV1: vi.fn()
+}));
+
 describe('GLPI MCP Server Integration', () => {
+  const originalMode = process.env.GLPI_MCP_MODE;
+
   beforeEach(() => {
+    delete process.env.GLPI_MCP_MODE;
     vi.mocked(client.glpiRequest).mockReset();
+    vi.mocked(clientV1.glpiRequestV1).mockReset();
   });
 
   afterEach(() => {
+    if (originalMode === undefined) {
+      delete process.env.GLPI_MCP_MODE;
+    } else {
+      process.env.GLPI_MCP_MODE = originalMode;
+    }
     vi.restoreAllMocks();
   });
 
-  it('should register and list all 31 tools', async () => {
+  it('should register and list all 41 tools in default (write) mode', async () => {
     const server = createServer();
     // Use request handler for ListTools
     const handlers = (server as any)._requestHandlers;
@@ -30,7 +44,7 @@ describe('GLPI MCP Server Integration', () => {
     expect(listHandler).toBeDefined();
 
     const result = await listHandler({ method: 'tools/list', params: {} });
-    expect(result.tools).toHaveLength(31);
+    expect(result.tools).toHaveLength(41);
 
     const toolNames = result.tools.map((t: any) => t.name);
     // Assistance: Ticket (7)
@@ -77,6 +91,18 @@ describe('GLPI MCP Server Integration', () => {
 
     // Statistics (1)
     expect(toolNames).toContain('glpi_get_asset_stats');
+
+    // Projects (10)
+    expect(toolNames).toContain('glpi_search_projects');
+    expect(toolNames).toContain('glpi_get_project');
+    expect(toolNames).toContain('glpi_create_project');
+    expect(toolNames).toContain('glpi_update_project');
+    expect(toolNames).toContain('glpi_create_project_task');
+    expect(toolNames).toContain('glpi_update_project_task');
+    expect(toolNames).toContain('glpi_link_project_itil');
+    expect(toolNames).toContain('glpi_link_task_ticket');
+    expect(toolNames).toContain('glpi_add_project_team');
+    expect(toolNames).toContain('glpi_list_project_states');
   });
 
   it('should call tool handler successfully via tools/call', async () => {
@@ -131,5 +157,80 @@ describe('GLPI MCP Server Integration', () => {
 
     expect(response.isError).toBe(true);
     expect(response.content[0].text).toContain('Error executing tool glpi_search_tickets: GLPI API timeout');
+  });
+
+  describe('isWriteTool & GLPI_MCP_MODE', () => {
+    it('isWriteTool should classify write and read tools accurately', () => {
+      expect(isWriteTool('glpi_create_ticket')).toBe(true);
+      expect(isWriteTool('glpi_update_project')).toBe(true);
+      expect(isWriteTool('glpi_add_project_team')).toBe(true);
+      expect(isWriteTool('glpi_link_project_itil')).toBe(true);
+      expect(isWriteTool('glpi_link_task_ticket')).toBe(true);
+      expect(isWriteTool('glpi_delete_anything')).toBe(true);
+
+      expect(isWriteTool('glpi_search_tickets')).toBe(false);
+      expect(isWriteTool('glpi_get_project')).toBe(false);
+      expect(isWriteTool('glpi_list_project_states')).toBe(false);
+      expect(isWriteTool('glpi_list_plugins')).toBe(false);
+    });
+
+    it('should omit write tools from tools/list and block write calls in read mode', async () => {
+      process.env.GLPI_MCP_MODE = 'read';
+      const server = createServer();
+      const handlers = (server as any)._requestHandlers;
+      const listHandler = handlers.get('tools/list');
+      const callHandler = handlers.get('tools/call');
+
+      const listResult = await listHandler({ method: 'tools/list', params: {} });
+      const toolNames: string[] = listResult.tools.map((t: any) => t.name);
+
+      expect(toolNames.length).toBe(25);
+      expect(toolNames.some(name => isWriteTool(name))).toBe(false);
+      expect(toolNames).toContain('glpi_search_projects');
+      expect(toolNames).toContain('glpi_get_project');
+      expect(toolNames).toContain('glpi_list_project_states');
+      expect(toolNames).not.toContain('glpi_create_project');
+      expect(toolNames).not.toContain('glpi_create_ticket');
+      expect(toolNames).not.toContain('glpi_link_project_itil');
+
+      const blockedProject = await callHandler({
+        method: 'tools/call',
+        params: {
+          name: 'glpi_create_project',
+          arguments: { name: 'Blocked' }
+        }
+      });
+      expect(blockedProject.isError).toBe(true);
+      expect(blockedProject.content[0].text).toContain('servidor em modo somente leitura (GLPI_MCP_MODE=read)');
+      expect(clientV1.glpiRequestV1).not.toHaveBeenCalled();
+
+      const blockedTicket = await callHandler({
+        method: 'tools/call',
+        params: {
+          name: 'glpi_create_ticket',
+          arguments: { input: { name: 'Blocked' } }
+        }
+      });
+      expect(blockedTicket.isError).toBe(true);
+      expect(blockedTicket.content[0].text).toContain('servidor em modo somente leitura (GLPI_MCP_MODE=read)');
+      expect(client.glpiRequest).not.toHaveBeenCalled();
+
+      // Read tool should still work in read mode
+      vi.mocked(clientV1.glpiRequestV1).mockResolvedValueOnce([{ id: 1, name: 'Ativo' }]);
+      const allowedRead = await callHandler({
+        method: 'tools/call',
+        params: {
+          name: 'glpi_list_project_states',
+          arguments: {}
+        }
+      });
+      expect(allowedRead.isError).toBeFalsy();
+      expect(allowedRead.content[0].text).toContain('Ativo');
+    });
+
+    it('should throw on invalid GLPI_MCP_MODE value during server creation', () => {
+      process.env.GLPI_MCP_MODE = 'invalid_mode';
+      expect(() => createServer()).toThrow(/GLPI_MCP_MODE/);
+    });
   });
 });
