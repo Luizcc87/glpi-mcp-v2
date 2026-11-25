@@ -15,13 +15,16 @@ describe('Knowledgebase Tools (API v1)', () => {
     vi.restoreAllMocks();
   });
 
-  it('should export all 3 tools', () => {
-    expect(kbTools.length).toBe(3);
+  it('should export all 6 tools', () => {
+    expect(kbTools.length).toBe(6);
     const names = kbTools.map(t => t.tool.name);
     expect(names).toEqual([
       'glpi_search_knowbase',
       'glpi_get_knowbase_item',
-      'glpi_search_faq'
+      'glpi_search_faq',
+      'glpi_create_knowbase_item',
+      'glpi_update_knowbase_item',
+      'glpi_delete_knowbase_item'
     ]);
   });
 
@@ -95,5 +98,63 @@ describe('Knowledgebase Tools (API v1)', () => {
       headers: {}
     });
     expect(result.content[0].text).toContain('"FAQ Geral"');
+  });
+
+  it('glpi_create_knowbase_item should post new article', async () => {
+    const createTool = kbTools.find(t => t.tool.name === 'glpi_create_knowbase_item');
+    vi.mocked(clientV1.glpiRequestV1).mockResolvedValueOnce({ id: 20, message: 'Item successfully added' });
+
+    const result = await createTool!.handler({
+      name: 'Novo Artigo',
+      answer: '<p>Conteudo</p>',
+      is_faq: 1
+    });
+
+    expect(clientV1.glpiRequestV1).toHaveBeenCalledWith('POST', '/KnowbaseItem', {
+      body: {
+        input: {
+          entities_id: 0,
+          is_recursive: 1,
+          name: 'Novo Artigo',
+          answer: '<p>Conteudo</p>',
+          is_faq: 1
+        }
+      }
+    });
+    expect(result.content[0].text).toContain('"Item successfully added"');
+  });
+
+  it('glpi_update_knowbase_item should put updated fields', async () => {
+    const updateTool = kbTools.find(t => t.tool.name === 'glpi_update_knowbase_item');
+    vi.mocked(clientV1.glpiRequestV1).mockResolvedValueOnce([{ 16: true, message: 'Item successfully updated' }]);
+
+    const result = await updateTool!.handler({
+      id: 16,
+      name: 'Artigo Atualizado',
+      answer: '<p>Novo conteudo</p>'
+    });
+
+    expect(clientV1.glpiRequestV1).toHaveBeenCalledWith('PUT', '/KnowbaseItem/16', {
+      body: {
+        input: {
+          id: 16,
+          name: 'Artigo Atualizado',
+          answer: '<p>Novo conteudo</p>'
+        }
+      }
+    });
+    expect(result.content[0].text).toContain('Item successfully updated');
+  });
+
+  it('glpi_delete_knowbase_item should delete article', async () => {
+    const deleteTool = kbTools.find(t => t.tool.name === 'glpi_delete_knowbase_item');
+    vi.mocked(clientV1.glpiRequestV1).mockResolvedValueOnce([{ 16: true, message: 'Item successfully deleted' }]);
+
+    const result = await deleteTool!.handler({ id: 16, force: true });
+
+    expect(clientV1.glpiRequestV1).toHaveBeenCalledWith('DELETE', '/KnowbaseItem/16', {
+      params: { force_purge: true }
+    });
+    expect(result.content[0].text).toContain('Item successfully deleted');
   });
 });

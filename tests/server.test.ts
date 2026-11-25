@@ -44,7 +44,7 @@ describe('GLPI MCP Server Integration', () => {
     expect(listHandler).toBeDefined();
 
     const result = await listHandler({ method: 'tools/list', params: {} });
-    expect(result.tools).toHaveLength(41);
+    expect(result.tools).toHaveLength(44);
 
     const toolNames = result.tools.map((t: any) => t.name);
     // Assistance: Ticket (7)
@@ -74,10 +74,13 @@ describe('GLPI MCP Server Integration', () => {
     expect(toolNames).toContain('glpi_add_change_followup');
     expect(toolNames).toContain('glpi_get_change_stats');
 
-    // Knowledgebase (3)
+    // Knowledgebase (6)
     expect(toolNames).toContain('glpi_search_knowbase');
     expect(toolNames).toContain('glpi_get_knowbase_item');
     expect(toolNames).toContain('glpi_search_faq');
+    expect(toolNames).toContain('glpi_create_knowbase_item');
+    expect(toolNames).toContain('glpi_update_knowbase_item');
+    expect(toolNames).toContain('glpi_delete_knowbase_item');
 
     // Assets (2)
     expect(toolNames).toContain('glpi_list_computers');
